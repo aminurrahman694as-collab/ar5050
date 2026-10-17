@@ -25,6 +25,24 @@ export async function fetchShopNames(sellerIds: string[]): Promise<Record<string
   return map;
 }
 
+export type Creator = { username: string | null; shopName: string | null };
+
+/**
+ * Public names for a set of uploader ids -> { [id]: { username, shopName } }.
+ * Goes through public_creator_names() (migration 022): profiles is private, and this
+ * returns only the public handle and shop name of active (not blocked) users.
+ */
+export async function fetchCreators(ids: string[]): Promise<Record<string, Creator>> {
+  const unique = [...new Set(ids)];
+  if (unique.length === 0) return {};
+  const { data } = await supabase.rpc('public_creator_names', { p_ids: unique });
+  const map: Record<string, Creator> = {};
+  ((data as { id: string; username: string | null; shop_name: string | null }[] | null) ?? []).forEach((c) => {
+    map[c.id] = { username: c.username, shopName: c.shop_name };
+  });
+  return map;
+}
+
 /**
  * Base types for the Multi-Vendor Platform.
  * More fields/types (Product, Order, Reel, Settings, etc.) will be added
@@ -39,6 +57,8 @@ export type Profile = {
   role: UserRole;
   mobile_number: string | null;
   is_active: boolean;
+  /** Public handle used in /u/:username; null until the user picks one (migration 022). */
+  username: string | null;
   created_at: string;
 };
 
@@ -98,14 +118,22 @@ export type DeliveryZone = {
   updated_at: string;
 };
 
+export type ReelKind = 'product' | 'content';
+
 export type Reel = {
   id: string;
+  /** The uploader's profile id (a seller for product reels, any user for content reels). */
   seller_id: string;
-  product_id: string;
+  /** null for content reels. */
+  product_id: string | null;
+  kind: ReelKind;
   video_url: string;
   thumbnail_url: string | null;
   caption: string | null;
+  hashtags: string[];
   is_active: boolean;
+  hidden_by_admin: boolean;
+  hidden_reason: string | null;
   like_count: number;
   created_at: string;
   updated_at: string;

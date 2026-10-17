@@ -65,3 +65,22 @@ FROM storage.objects
 WHERE bucket_id = 'reel-videos' AND name !~* '\.(jpe?g|png|webp)$'
 ORDER BY (metadata->>'size')::numeric DESC NULLS LAST
 LIMIT 10;
+
+-- 10) Step 1 check (after running migrations 021 and 022). Every row should say true.
+SELECT 'reels.kind / hashtags / hidden_by_admin' AS item,
+       (SELECT count(*) FROM information_schema.columns
+        WHERE table_schema = 'public' AND table_name = 'reels'
+          AND column_name IN ('kind', 'hashtags', 'hidden_by_admin', 'hidden_reason')) = 4 AS ok
+UNION ALL SELECT 'reels.product_id is nullable',
+       (SELECT is_nullable = 'YES' FROM information_schema.columns
+        WHERE table_schema = 'public' AND table_name = 'reels' AND column_name = 'product_id')
+UNION ALL SELECT 'profiles.username',
+       EXISTS (SELECT 1 FROM information_schema.columns
+               WHERE table_schema = 'public' AND table_name = 'profiles' AND column_name = 'username')
+UNION ALL SELECT 'reel + profile guard triggers',
+       (SELECT count(*) FROM pg_trigger
+        WHERE tgname IN ('trg_reels_guard', 'trg_reels_validate', 'trg_profiles_self_guard')) = 3
+UNION ALL SELECT 'public creator functions',
+       (SELECT count(*) FROM pg_proc WHERE proname IN ('public_creator_names', 'public_creator_profile')) = 2
+UNION ALL SELECT 'reel-videos bucket limit 50 MB',
+       EXISTS (SELECT 1 FROM storage.buckets WHERE id = 'reel-videos' AND file_size_limit = 52428800);

@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { Loader2, Volume2, VolumeX, Share2, ShoppingBag, Package, Film, Play } from 'lucide-react';
-import { supabase, fetchShopNames, ReelWithProduct } from '../../lib/supabase';
+import { supabase, fetchCreators, Creator, ReelWithProduct } from '../../lib/supabase';
 import { formatPrice } from '../../lib/format';
+import { shareReel } from '../../lib/reelUpload';
 import { useReelSound } from '../../hooks/useReelSound';
 import { useActiveSlide } from '../../hooks/useActiveSlide';
 import {
@@ -13,9 +14,11 @@ export default function ReelsFeed() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const startId = searchParams.get('start');
+  // /reels?user=<id> shows only that creator's reels (opened from a profile page)
+  const userFilter = searchParams.get('user');
 
   const [reels, setReels] = useState<ReelWithProduct[]>([]);
-  const [shops, setShops] = useState<Record<string, string>>({});
+  const [creators, setCreators] = useState<Record<string, Creator>>({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -42,15 +45,17 @@ export default function ReelsFeed() {
   const videoRefs = useRef<Record<number, HTMLVideoElement | null>>({});
   const didScrollToStart = useRef(false);
 
-  // ---- Load reels (RLS only returns active reels of approved, active products) ----
+  // ---- Load reels (RLS returns active, un-hidden reels: content reels, and product reels of approved products) ----
   useEffect(() => {
     (async () => {
-      const { data, error: err } = await supabase
+      let query = supabase
         .from('reels')
         .select('*, product:products(*)')
         .eq('is_active', true)
         .order('created_at', { ascending: false })
         .limit(50);
+      if (userFilter) query = query.eq('seller_id', userFilter);
+      const { data, error: err } = await query;
 
       if (err) {
         setError(err.message);
@@ -58,13 +63,16 @@ export default function ReelsFeed() {
         return;
       }
 
-      const list = ((data as ReelWithProduct[]) ?? []).filter((r) => r.product);
+      // Admins/owners can also read hidden rows, so re-check visibility here
+      const list = ((data as ReelWithProduct[]) ?? []).filter(
+        (r) => r.is_active && !r.hidden_by_admin && (r.kind === 'content' || r.product)
+      );
       setReels(list);
 
-      setShops(await fetchShopNames(list.map((r) => r.seller_id)));
+      setCreators(await fetchCreators(list.map((r) => r.seller_id)));
       setLoading(false);
     })();
-  }, []);
+  }, [userFilter]);
 
   // ---- Jump to ?start=<reelId> once ----
   useEffect(() => {
@@ -181,18 +189,8 @@ export default function ReelsFeed() {
   };
 
   const share = async (reel: ReelWithProduct) => {
-    const url = `${window.location.origin}/reels?start=${reel.id}`;
-    const title = reel.product?.name ?? 'Reel';
-    try {
-      if (navigator.share) {
-        await navigator.share({ title, url });
-      } else {
-        await navigator.clipboard.writeText(url);
-        setToast('Link copied');
-      }
-    } catch {
-      /* user cancelled */
-    }
+    const result = await shareReel(reel.id, reel.product?.name ?? (reel.caption?.slice(0, 60) || 'Reel'));
+    if (result === 'copied') setToast('Link copied');
   };
 
   if (loading) {
@@ -222,8 +220,9 @@ export default function ReelsFeed() {
         className="h-full overflow-y-scroll snap-y snap-mandatory no-scrollbar"
       >
         {reels.map((reel, i) => {
-          const product = reel.product!;
-          const soldOut = product.stock <= 0;
+          const product = reel.kind === 'content' ? null : reel.product;
+          const soldOut = product ? product.stock <= 0 : false;
+          const creator = creators[reel.seller_id];
           const mode = loadModeFor(i - active, stalled, slow);
 
           return (
@@ -276,37 +275,50 @@ export default function ReelsFeed() {
 
                 {/* Bottom info + Buy Now */}
                 <div className="absolute inset-x-0 bottom-0 z-10 p-4 pt-24 bg-gradient-to-t from-black/90 via-black/60 to-transparent">
-                  {shops[reel.seller_id] && (
-                    <p className="text-white font-semibold text-sm mb-1">@{shops[reel.seller_id]}</p>
-                  )}
+                  {product ? (
+                    creator?.shopName && (
+                      <p className="text-white font-semibold text-sm mb-1">@{creator.shopName}</p>
+                    )
+                  ) : creator?.username ? (
+                    <Link to={`/u/${creator.username}`} className="mb-1 inline-block text-sm font-semibold text-white">
+                      @{creator.username}
+                    </Link>
+                  ) : null}
                   {reel.caption && (
-                    <p className="text-white/90 text-sm line-clamp-2 mb-3 pr-14">{reel.caption}</p>
+                    <p className="text-white/90 text-sm line-clamp-2 mb-2 pr-14">{reel.caption}</p>
+                  )}
+                  {!product && reel.hashtags?.length > 0 && (
+                    <p className="mb-3 line-clamp-1 pr-14 text-xs text-white/70">
+                      {reel.hashtags.map((t) => `#${t}`).join(' ')}
+                    </p>
                   )}
 
-                  <div className="flex items-center gap-3 bg-black/50 backdrop-blur rounded-2xl p-2.5 border border-white/10">
-                    <Link
-                      to={`/product/${product.id}`}
-                      className="w-14 h-14 shrink-0 rounded-xl overflow-hidden bg-dark-700 flex items-center justify-center"
-                    >
-                      {product.image_url ? (
-                        <img src={product.image_url} alt="" className="w-full h-full object-cover" />
-                      ) : (
-                        <Package className="w-6 h-6 text-dark-500" />
-                      )}
-                    </Link>
-                    <Link to={`/product/${product.id}`} className="flex-1 min-w-0">
-                      <p className="text-white text-sm font-medium truncate">{product.name}</p>
-                      <p className="text-primary-400 font-bold">{formatPrice(product.price)}</p>
-                    </Link>
-                    <button
-                      disabled={soldOut}
-                      onClick={() => navigate(`/checkout/${product.id}?qty=1`)}
-                      className="shrink-0 flex items-center gap-1.5 px-4 py-2.5 bg-primary-600 hover:bg-primary-700 disabled:bg-dark-700 disabled:text-dark-400 text-white text-sm font-semibold rounded-xl"
-                    >
-                      <ShoppingBag className="w-4 h-4" />
-                      {soldOut ? 'Sold out' : 'Buy Now'}
-                    </button>
-                  </div>
+                  {product && (
+                    <div className="flex items-center gap-3 bg-black/50 backdrop-blur rounded-2xl p-2.5 border border-white/10">
+                      <Link
+                        to={`/product/${product.id}`}
+                        className="w-14 h-14 shrink-0 rounded-xl overflow-hidden bg-dark-700 flex items-center justify-center"
+                      >
+                        {product.image_url ? (
+                          <img src={product.image_url} alt="" className="w-full h-full object-cover" />
+                        ) : (
+                          <Package className="w-6 h-6 text-dark-500" />
+                        )}
+                      </Link>
+                      <Link to={`/product/${product.id}`} className="flex-1 min-w-0">
+                        <p className="text-white text-sm font-medium truncate">{product.name}</p>
+                        <p className="text-primary-400 font-bold">{formatPrice(product.price)}</p>
+                      </Link>
+                      <button
+                        disabled={soldOut}
+                        onClick={() => navigate(`/checkout/${product.id}?qty=1`)}
+                        className="shrink-0 flex items-center gap-1.5 px-4 py-2.5 bg-primary-600 hover:bg-primary-700 disabled:bg-dark-700 disabled:text-dark-400 text-white text-sm font-semibold rounded-xl"
+                      >
+                        <ShoppingBag className="w-4 h-4" />
+                        {soldOut ? 'Sold out' : 'Buy Now'}
+                      </button>
+                    </div>
+                  )}
                 </div>
               </div>
             </section>

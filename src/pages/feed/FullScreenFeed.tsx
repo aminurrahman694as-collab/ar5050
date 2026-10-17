@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { ArrowLeft, Film, Loader2, Sparkles, Volume2, VolumeX } from 'lucide-react';
-import { supabase, fetchShopNames, Product, ReelWithProduct } from '../../lib/supabase';
+import { supabase, fetchCreators, Creator, Product, ReelWithProduct } from '../../lib/supabase';
 import { useAuth } from '../../hooks/useAuth';
 import { useReelSound } from '../../hooks/useReelSound';
 import { useActiveSlide } from '../../hooks/useActiveSlide';
@@ -30,7 +30,7 @@ export default function FullScreenFeed({ variant = 'standalone' }: FullScreenFee
 
   const [reels, setReels] = useState<ReelWithProduct[]>([]);
   const [plainProducts, setPlainProducts] = useState<Product[]>([]);
-  const [shops, setShops] = useState<Record<string, string>>({});
+  const [creators, setCreators] = useState<Record<string, Creator>>({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -57,7 +57,7 @@ export default function FullScreenFeed({ variant = 'standalone' }: FullScreenFee
   const [active] = useActiveSlide(container, items.length, () => setStalled(false));
   const slow = isSlowConnection();
 
-  // ---- Load reels (RLS only returns active reels of approved, active products) ----
+  // ---- Load reels (RLS returns active, un-hidden reels: content reels, and product reels of approved products) ----
   useEffect(() => {
     (async () => {
       const { data, error: err } = await supabase
@@ -73,15 +73,19 @@ export default function FullScreenFeed({ variant = 'standalone' }: FullScreenFee
         return;
       }
 
-      // Admins/sellers can also read non-approved rows, so re-check visibility here
+      // Admins/owners can also read hidden or non-approved rows, so re-check visibility here
       const list = ((data as ReelWithProduct[]) ?? []).filter(
-        (r) => r.product && r.product.status === 'approved' && r.product.is_active
+        (r) =>
+          r.is_active &&
+          !r.hidden_by_admin &&
+          (r.kind === 'content' ||
+            (r.product && r.product.status === 'approved' && r.product.is_active))
       );
       setReels(list);
       setCounts(Object.fromEntries(list.map((r) => [r.id, r.like_count ?? 0])));
 
       // Approved products that have no reel -> shown as product cards (14গ)
-      const withReel = new Set(list.map((r) => r.product_id));
+      const withReel = new Set(list.map((r) => r.product_id).filter((id): id is string => !!id));
       const { data: prodData } = await supabase
         .from('products')
         .select('*')
@@ -92,7 +96,7 @@ export default function FullScreenFeed({ variant = 'standalone' }: FullScreenFee
       const plain = ((prodData as Product[]) ?? []).filter((p) => !withReel.has(p.id)).slice(0, 30);
       setPlainProducts(plain);
 
-      setShops(await fetchShopNames([...list.map((r) => r.seller_id), ...plain.map((p) => p.seller_id)]));
+      setCreators(await fetchCreators([...list.map((r) => r.seller_id), ...plain.map((p) => p.seller_id)]));
       setLoading(false);
     })();
   }, []);
@@ -252,7 +256,8 @@ export default function FullScreenFeed({ variant = 'standalone' }: FullScreenFee
               {item.kind === 'reel' ? (
                 <ReelSlide
                   reel={item.reel}
-                  shopName={shops[item.reel.seller_id]}
+                  shopName={creators[item.reel.seller_id]?.shopName ?? undefined}
+                  creatorUsername={creators[item.reel.seller_id]?.username}
                   isActive={i === active}
                   loadMode={loadModeFor(i - active, stalled, slow)}
                   onStalled={setStalled}
@@ -264,7 +269,7 @@ export default function FullScreenFeed({ variant = 'standalone' }: FullScreenFee
                   onToggleLike={() => toggleLike(item.reel.id)}
                 />
               ) : (
-                <ProductSlide product={item.product} shopName={shops[item.product.seller_id]} />
+                <ProductSlide product={item.product} shopName={creators[item.product.seller_id]?.shopName ?? undefined} />
               )}
             </div>
           ))}

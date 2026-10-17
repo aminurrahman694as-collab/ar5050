@@ -1,13 +1,17 @@
 import { useEffect, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Heart, MessageCircle, Package, Play, ShoppingBag } from 'lucide-react';
+import { Heart, MessageCircle, Package, Play, Share2, ShoppingBag } from 'lucide-react';
 import type { ReelWithProduct } from '../../lib/supabase';
 import { formatCount, formatPrice } from '../../lib/format';
 import { LoadMode, PLAY_DELAY_MS, STALL_AFTER_MS, preloadFor, unloadVideo } from '../../lib/reelPlayback';
+import { shareReel } from '../../lib/reelUpload';
 
 interface ReelSlideProps {
   reel: ReelWithProduct;
+  /** Shop name of the seller (product reels). */
   shopName?: string;
+  /** Public @username of the uploader (content reels). */
+  creatorUsername?: string | null;
   /** This slide is the one currently centered on screen. */
   isActive: boolean;
   /** How much of the video to download (see lib/reelPlayback.ts). */
@@ -29,10 +33,20 @@ interface ReelSlideProps {
  * Plays only while active, pauses (and rewinds) when scrolled away, and releases its
  * video data when it is no longer next to the slide on screen.
  */
-export default function ReelSlide({ reel, shopName, isActive, loadMode, onStalled, muted, soundLocked, onPlayBlocked, liked, likeCount, onToggleLike }: ReelSlideProps) {
+export default function ReelSlide({ reel, shopName, creatorUsername, isActive, loadMode, onStalled, muted, soundLocked, onPlayBlocked, liked, likeCount, onToggleLike }: ReelSlideProps) {
   const navigate = useNavigate();
-  const product = reel.product!;
-  const soldOut = product.stock <= 0;
+  // Product reels show a Buy Now bar; content reels (kind 'content') have no product at all.
+  const product = reel.kind === 'content' ? null : reel.product;
+  const soldOut = product ? product.stock <= 0 : false;
+  const [copied, setCopied] = useState(false);
+
+  const share = async () => {
+    const result = await shareReel(reel.id, reel.caption?.slice(0, 60) || 'Reel');
+    if (result === 'copied') {
+      setCopied(true);
+      window.setTimeout(() => setCopied(false), 1800);
+    }
+  };
 
   const videoRef = useRef<HTMLVideoElement>(null);
   const [userPaused, setUserPaused] = useState(false);
@@ -187,15 +201,24 @@ export default function ReelSlide({ reel, shopName, isActive, loadMode, onStalle
             </span>
             <span className="text-xs font-semibold drop-shadow">{formatCount(likeCount)}</span>
           </button>
-          <button
-            onClick={() => navigate(`/product/${product.id}`)}
-            className="flex flex-col items-center gap-1 text-white"
-            aria-label="Comments — open product page"
-          >
-            <span className="flex h-11 w-11 items-center justify-center rounded-full bg-black/40 backdrop-blur">
-              <MessageCircle className="h-6 w-6" />
-            </span>
-          </button>
+          {product ? (
+            <button
+              onClick={() => navigate(`/product/${product.id}`)}
+              className="flex flex-col items-center gap-1 text-white"
+              aria-label="Comments — open product page"
+            >
+              <span className="flex h-11 w-11 items-center justify-center rounded-full bg-black/40 backdrop-blur">
+                <MessageCircle className="h-6 w-6" />
+              </span>
+            </button>
+          ) : (
+            <button onClick={share} className="flex flex-col items-center gap-1 text-white" aria-label="Share">
+              <span className="flex h-11 w-11 items-center justify-center rounded-full bg-black/40 backdrop-blur">
+                <Share2 className="h-6 w-6" />
+              </span>
+              <span className="text-xs font-semibold drop-shadow">{copied ? 'Copied' : 'Share'}</span>
+            </button>
+          )}
         </div>
 
         {/* Bottom info + Buy Now */}
@@ -203,35 +226,48 @@ export default function ReelSlide({ reel, shopName, isActive, loadMode, onStalle
           className="absolute inset-x-0 bottom-0 z-10 bg-gradient-to-t from-black/90 via-black/50 to-transparent px-4 pt-28"
           style={{ paddingBottom: 'calc(1rem + env(safe-area-inset-bottom, 0px))' }}
         >
-          {shopName && <p className="mb-1 text-sm font-semibold text-white">@{shopName}</p>}
+          {product ? (
+            shopName && <p className="mb-1 text-sm font-semibold text-white">@{shopName}</p>
+          ) : creatorUsername ? (
+            <Link to={`/u/${creatorUsername}`} className="mb-1 inline-block text-sm font-semibold text-white">
+              @{creatorUsername}
+            </Link>
+          ) : null}
           {reel.caption && (
-            <p className="mb-3 line-clamp-2 pr-10 text-sm text-white/90">{reel.caption}</p>
+            <p className="mb-2 line-clamp-2 pr-14 text-sm text-white/90">{reel.caption}</p>
+          )}
+          {reel.hashtags?.length > 0 && !product && (
+            <p className="mb-3 line-clamp-1 pr-14 text-xs text-white/70">
+              {reel.hashtags.map((t) => `#${t}`).join(' ')}
+            </p>
           )}
 
-          <div className="flex items-center gap-3 rounded-2xl border border-white/10 bg-black/50 p-2.5 backdrop-blur">
-            <Link
-              to={`/product/${product.id}`}
-              className="flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-dark-700"
-            >
-              {product.image_url ? (
-                <img src={product.image_url} alt="" className="h-full w-full object-cover" />
-              ) : (
-                <Package className="h-6 w-6 text-dark-500" />
-              )}
-            </Link>
-            <Link to={`/product/${product.id}`} className="min-w-0 flex-1">
-              <p className="truncate text-sm font-medium text-white">{product.name}</p>
-              <p className="font-bold text-primary-400">{formatPrice(product.price)}</p>
-            </Link>
-            <button
-              disabled={soldOut}
-              onClick={() => navigate(`/checkout/${product.id}?qty=1`)}
-              className="flex shrink-0 items-center gap-1.5 rounded-xl bg-primary-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-primary-700 disabled:bg-dark-700 disabled:text-dark-400"
-            >
-              <ShoppingBag className="h-4 w-4" />
-              {soldOut ? 'Sold out' : 'Buy Now'}
-            </button>
-          </div>
+          {product && (
+            <div className="mt-1 flex items-center gap-3 rounded-2xl border border-white/10 bg-black/50 p-2.5 backdrop-blur">
+              <Link
+                to={`/product/${product.id}`}
+                className="flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-dark-700"
+              >
+                {product.image_url ? (
+                  <img src={product.image_url} alt="" className="h-full w-full object-cover" />
+                ) : (
+                  <Package className="h-6 w-6 text-dark-500" />
+                )}
+              </Link>
+              <Link to={`/product/${product.id}`} className="min-w-0 flex-1">
+                <p className="truncate text-sm font-medium text-white">{product.name}</p>
+                <p className="font-bold text-primary-400">{formatPrice(product.price)}</p>
+              </Link>
+              <button
+                disabled={soldOut}
+                onClick={() => navigate(`/checkout/${product.id}?qty=1`)}
+                className="flex shrink-0 items-center gap-1.5 rounded-xl bg-primary-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-primary-700 disabled:bg-dark-700 disabled:text-dark-400"
+              >
+                <ShoppingBag className="h-4 w-4" />
+                {soldOut ? 'Sold out' : 'Buy Now'}
+              </button>
+            </div>
+          )}
         </div>
 
         {/* Progress line */}

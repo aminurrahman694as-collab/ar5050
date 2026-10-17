@@ -13,6 +13,9 @@ import CommissionSettings from './pages/admin/CommissionSettings';
 import DeliveryZones from './pages/admin/DeliveryZones';
 import PaymentSettings from './pages/admin/PaymentSettings';
 import AdminSellerPayouts from './pages/admin/SellerPayouts';
+import ReelsReview from './pages/admin/ReelsReview';
+import Create from './pages/creator/Create';
+import CreatorProfile, { MyProfileRedirect } from './pages/creator/CreatorProfile';
 import SellerDashboard from './pages/seller/SellerDashboard';
 import Shop from './pages/shop/Shop';
 import ProductDetail from './pages/shop/ProductDetail';
@@ -56,6 +59,11 @@ function AppRoutes() {
 
       {/* Phase 14 — full-screen TikTok-style feed (home = with header + bottom nav) */}
       <Route path="/feed-test" element={<FullScreenFeed />} />
+
+      {/* Step 1 — creators: post a reel, public creator pages */}
+      <Route path="/create" element={<Layout><Create /></Layout>} />
+      <Route path="/u/:username" element={<Layout><CreatorProfile /></Layout>} />
+      <Route path="/profile" element={<Layout><MyProfileRedirect /></Layout>} />
 
       {/* Info pages (Phase 15ছ) */}
       <Route path="/contact" element={<Layout><Contact /></Layout>} />
@@ -107,6 +115,7 @@ function AppRoutes() {
         <Route path="delivery" element={<DeliveryZones />} />
         <Route path="payments" element={<PaymentSettings />} />
         <Route path="payouts" element={<AdminSellerPayouts />} />
+        <Route path="reels" element={<ReelsReview />} />
         <Route path="*" element={<Navigate to="/admin" replace />} />
       </Route>
 

@@ -1,4 +1,4 @@
-import { ShoppingBag, Film, Home, ClipboardList, Sparkles, LayoutDashboard, Store } from 'lucide-react';
+import { ShoppingBag, Film, Home, ClipboardList, Sparkles, LayoutDashboard, Store, PlusSquare, UserCircle } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
 
@@ -23,6 +23,8 @@ export function useNavLinks() {
   ];
 
   const account: NavLink[] = [];
+  if (user) account.push({ label: 'Create a Reel', path: '/create', icon: PlusSquare });
+  if (user) account.push({ label: 'My Profile', path: '/profile', icon: UserCircle });
   if (user) account.push({ label: 'My Orders', path: '/orders', icon: ClipboardList });
   if (user && isCustomer) account.push({ label: 'Become a Seller', path: '/become-seller', icon: Sparkles });
   if (isSeller || isAdmin) account.push({ label: 'Seller Dashboard', path: '/seller', icon: LayoutDashboard });

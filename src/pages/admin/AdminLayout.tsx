@@ -3,7 +3,7 @@ import { NavLink, Outlet, useLocation } from 'react-router-dom';
 import type { LucideIcon } from 'lucide-react';
 import {
   LayoutDashboard, Users, Package, PackageCheck, ClipboardList, Percent, MapPin,
-  Wallet, UserCircle, Tag, BarChart3, Mail, Languages, HelpCircle, FileText, Menu, X,
+  Wallet, UserCircle, Tag, BarChart3, Mail, Languages, HelpCircle, FileText, Menu, X, Film,
 } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 
@@ -21,6 +21,7 @@ function buildGroups(pendingProducts: number): NavGroup[] {
         { label: 'Pending Approval', to: '/admin/approval', icon: PackageCheck, badge: pendingProducts },
         { label: 'Orders', to: '/admin/orders', icon: ClipboardList },
         { label: 'Seller Payouts', to: '/admin/payouts', icon: Wallet },
+        { label: 'Reels Review', to: '/admin/reels', icon: Film },
       ],
     },
     {

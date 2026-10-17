@@ -67,18 +67,30 @@ export default function Terms() {
         </ul>
       </Section>
 
-      <Section title="8. Prohibited use">
+      <Section title="8. Reels and uploaded videos">
+        <p>Anyone with an account can post short videos (reels). By posting you agree that:</p>
+        <ul className="list-disc pl-5 space-y-1">
+          <li>The video is yours, or you have the right to use everything in it, including music, images and brand material. You are responsible for what you post.</li>
+          <li>It does not contain nudity or sexual content, violence or threats, hate or harassment, illegal goods or services, scams, or personal information about other people shared without their consent.</li>
+          <li>It does not mislead people about a product, its price or its seller. Only a verified seller can attach a product to a reel.</li>
+          <li>Videos are limited to 60 seconds and 25 MB, and each account can post up to 10 reels a day.</li>
+          <li>Your username must not copy or pretend to be another person, the site or its staff.</li>
+          <li>We may hide or delete any reel, and restrict or block accounts that break these rules, with or without notice. You can delete your own reels at any time from your profile.</li>
+        </ul>
+      </Section>
+
+      <Section title="9. Prohibited use">
         <p>
           You may not use the site for anything unlawful, to sell prohibited or counterfeit goods, to upload harmful
           content, or to interfere with how the site works.
         </p>
       </Section>
 
-      <Section title="9. Changes to these terms">
+      <Section title="10. Changes to these terms">
         <p>We may update these terms from time to time. The version on this page is the one that applies.</p>
       </Section>
 
-      <Section title="10. Contact">
+      <Section title="11. Contact">
         <p>
           Questions about these terms? Call {BRAND.contact.phone} or email {BRAND.contact.email}, or visit our{' '}
           <Link to="/contact" className="text-primary-400 hover:text-primary-300">Contact page</Link>.
