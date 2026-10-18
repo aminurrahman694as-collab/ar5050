@@ -1,0 +1,237 @@
+{
+  "project": "ar-traders",
+  "roadmap": "v6.8",
+  "phases": [
+    {
+      "id": "P01",
+      "title": "সিক্রেট অডিট ও গিট হাইজিন",
+      "file": "roadmap/phases/P01.md",
+      "status": "pending",
+      "attempts": 0
+    },
+    {
+      "id": "P02",
+      "title": "RLS ও SECURITY DEFINER অডিট",
+      "file": "roadmap/phases/P02.md",
+      "status": "pending",
+      "attempts": 0
+    },
+    {
+      "id": "P03",
+      "title": "স্টক লক ও সার্ভার-সাইড দাম",
+      "file": "roadmap/phases/P03.md",
+      "status": "pending",
+      "attempts": 0
+    },
+    {
+      "id": "P04",
+      "title": "সিকিউরিটি হেডার ও CSP (Report-Only)",
+      "file": "roadmap/phases/P04.md",
+      "status": "pending",
+      "attempts": 0
+    },
+    {
+      "id": "P05",
+      "title": "বট-প্রতিরোধ, ব্যান এনফোর্সমেন্ট, অ্যাডমিন অডিট লগ",
+      "file": "roadmap/phases/P05.md",
+      "status": "pending",
+      "attempts": 0
+    },
+    {
+      "id": "P06",
+      "title": "হোস্ট গার্ড, বিল্ড হার্ডেনিং, কিল-সুইচ",
+      "file": "roadmap/phases/P06.md",
+      "status": "pending",
+      "attempts": 0
+    },
+    {
+      "id": "P07",
+      "title": "DB: ফোন ও অ্যাভাটার (মাইগ্রেশন 023)",
+      "file": "roadmap/phases/P07.md",
+      "status": "pending",
+      "attempts": 0
+    },
+    {
+      "id": "P08",
+      "title": "রেজিস্ট্রেশন UI ও প্রোফাইল ছবি",
+      "file": "roadmap/phases/P08.md",
+      "status": "pending",
+      "attempts": 0
+    },
+    {
+      "id": "P09",
+      "title": "অ্যাভাটার এনফোর্সমেন্ট ও আপলোড সিকিউরিটি",
+      "file": "roadmap/phases/P09.md",
+      "status": "pending",
+      "attempts": 0
+    },
+    {
+      "id": "P10",
+      "title": "ইউনিফাইড হোম ফিড ও kind সেপারেশন",
+      "file": "roadmap/phases/P10.md",
+      "status": "pending",
+      "attempts": 0
+    },
+    {
+      "id": "P11",
+      "title": "R2 ব্যাকএন্ড: presigned URL (মাইগ্রেশন 027)",
+      "file": "roadmap/phases/P11.md",
+      "status": "pending",
+      "attempts": 0
+    },
+    {
+      "id": "P12",
+      "title": "R2 ফ্রন্টএন্ড: আপলোড ও প্লেব্যাক",
+      "file": "roadmap/phases/P12.md",
+      "status": "pending",
+      "attempts": 0
+    },
+    {
+      "id": "P13",
+      "title": "ফলো সিস্টেম (মাইগ্রেশন 024)",
+      "file": "roadmap/phases/P13.md",
+      "status": "pending",
+      "attempts": 0
+    },
+    {
+      "id": "P14",
+      "title": "কমেন্ট (মাইগ্রেশন 029)",
+      "file": "roadmap/phases/P14.md",
+      "status": "pending",
+      "attempts": 0
+    },
+    {
+      "id": "P15",
+      "title": "রিপোর্ট সিস্টেম ও অটো-হাইড (মাইগ্রেশন 030)",
+      "file": "roadmap/phases/P15.md",
+      "status": "pending",
+      "attempts": 0
+    },
+    {
+      "id": "P16",
+      "title": "অ্যাডমিন রিভিউ কিউ, ব্লক/মিউট UI",
+      "file": "roadmap/phases/P16.md",
+      "status": "pending",
+      "attempts": 0
+    },
+    {
+      "id": "P17",
+      "title": "স্টুডিও MVP-১: রুট, ট্রিম, কভার ফ্রেম",
+      "file": "roadmap/phases/P17.md",
+      "status": "pending",
+      "attempts": 0
+    },
+    {
+      "id": "P18",
+      "title": "স্টুডিও MVP-২: ক্রপ, ফ্লিপ, ৯:১৬ এক্সপোর্ট",
+      "file": "roadmap/phases/P18.md",
+      "status": "pending",
+      "attempts": 0
+    },
+    {
+      "id": "P19",
+      "title": "হোম ট্যাব: Explore / Following / For You",
+      "file": "roadmap/phases/P19.md",
+      "status": "pending",
+      "attempts": 0
+    },
+    {
+      "id": "P20",
+      "title": "আইনি/পলিসি পেজ ও কনসেন্ট ব্যানার",
+      "file": "roadmap/phases/P20.md",
+      "status": "pending",
+      "attempts": 0
+    },
+    {
+      "id": "P21",
+      "title": "অ্যাকাউন্ট ডিলিট, কপিরাইট সম্মতি, সেলার পণ্য-নীতি",
+      "file": "roadmap/phases/P21.md",
+      "status": "pending",
+      "attempts": 0
+    },
+    {
+      "id": "P22",
+      "title": "AdSense কোর: adPolicy, ads.txt, InFeedNativeAd",
+      "file": "roadmap/phases/P22.md",
+      "status": "pending",
+      "attempts": 0
+    },
+    {
+      "id": "P23",
+      "title": "অ্যাড প্লেসমেন্ট: শপ, প্রোফাইল, তথ্য পেজ",
+      "file": "roadmap/phases/P23.md",
+      "status": "pending",
+      "attempts": 0
+    },
+    {
+      "id": "P24",
+      "title": "reel_views ও traffic_source (মাইগ্রেশন 025)",
+      "file": "roadmap/phases/P24.md",
+      "status": "pending",
+      "attempts": 0
+    },
+    {
+      "id": "P25",
+      "title": "অর্ডার স্টেট মেশিন (মাইগ্রেশন 028)",
+      "file": "roadmap/phases/P25.md",
+      "status": "pending",
+      "attempts": 0
+    },
+    {
+      "id": "P26",
+      "title": "পেমেন্ট হার্ডেনিং ও COD কনফার্ম",
+      "file": "roadmap/phases/P26.md",
+      "status": "pending",
+      "attempts": 0
+    },
+    {
+      "id": "P27",
+      "title": "Steadfast কুরিয়ার (Edge Function + ওয়েবহুক)",
+      "file": "roadmap/phases/P27.md",
+      "status": "pending",
+      "attempts": 0
+    },
+    {
+      "id": "P28",
+      "title": "Pathao কুরিয়ার (Edge Function + ওয়েবহুক)",
+      "file": "roadmap/phases/P28.md",
+      "status": "pending",
+      "attempts": 0
+    },
+    {
+      "id": "P29",
+      "title": "কুরিয়ার UI (অ্যাডমিন/সেলার)",
+      "file": "roadmap/phases/P29.md",
+      "status": "pending",
+      "attempts": 0
+    },
+    {
+      "id": "P30",
+      "title": "স্টুডিও ক্রিয়েটিভ: ফিল্টার, টেক্সট, স্টিকার",
+      "file": "roadmap/phases/P30.md",
+      "status": "pending",
+      "attempts": 0
+    },
+    {
+      "id": "P31",
+      "title": "মিউজিক লাইব্রেরি (মাইগ্রেশন 026)",
+      "file": "roadmap/phases/P31.md",
+      "status": "pending",
+      "attempts": 0
+    },
+    {
+      "id": "P32",
+      "title": "রেন্ডারিং ইঞ্জিন: ffmpeg.wasm / WebCodecs",
+      "file": "roadmap/phases/P32.md",
+      "status": "pending",
+      "attempts": 0
+    },
+    {
+      "id": "P33",
+      "title": "ফাইনাল: সেলফ-হিলিং চেক ও লাইভ প্রস্তুতি",
+      "file": "roadmap/phases/P33.md",
+      "status": "pending",
+      "attempts": 0
+    }
+  ]
+}
