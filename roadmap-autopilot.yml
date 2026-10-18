@@ -1,0 +1,214 @@
+name: Roadmap Autopilot
+
+# প্রতি রানে ঠিক একটি ফেজ। সফল হলে নিজেই পরের ফেজ চালু করে।
+# থামাতে: Settings → Variables → AUTOPILOT_ENABLED = false
+
+on:
+  workflow_dispatch:
+    inputs:
+      phase:
+        description: "নির্দিষ্ট ফেজ (যেমন P05)। ফাঁকা = পরের pending ফেজ"
+        required: false
+        default: ""
+      chain:
+        description: "শেষ হলে নিজে থেকে পরের ফেজ চালু করবে? (true/false)"
+        required: false
+        default: "true"
+  schedule:
+    # লিমিট/নেটওয়ার্কে আটকে গেলে ৬ ঘণ্টা পরপর আবার চেষ্টা
+    - cron: "23 */6 * * *"
+
+concurrency:
+  group: roadmap-autopilot
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+  pull-requests: write
+  issues: write
+  actions: write
+
+env:
+  WORK_BRANCH: autopilot
+
+jobs:
+  run-phase:
+    if: ${{ vars.AUTOPILOT_ENABLED == 'true' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Switch to work branch
+        run: |
+          git config user.name "ar-roadmap-bot"
+          git config user.email "ar-roadmap-bot@users.noreply.github.com"
+          if git ls-remote --exit-code --heads origin "$WORK_BRANCH" >/dev/null 2>&1; then
+            git checkout -B "$WORK_BRANCH" "origin/$WORK_BRANCH"
+          else
+            git checkout -b "$WORK_BRANCH"
+          fi
+
+      - name: Pick phase
+        id: pick
+        env:
+          REQ: ${{ github.event.inputs.phase }}
+        run: |
+          FAILED=$(jq -r '[.phases[]|select(.status=="failed")][0].id // empty' roadmap/STATUS.json)
+          if [ -z "$REQ" ] && [ -n "$FAILED" ]; then
+            echo "::warning::$FAILED ব্যর্থ হয়েছে। ঠিক করে STATUS.json-এ status=pending করুন।"
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          ID="$REQ"
+          if [ -z "$ID" ]; then
+            ID=$(jq -r '[.phases[]|select(.status=="pending")][0].id // empty' roadmap/STATUS.json)
+          fi
+          if [ -z "$ID" ]; then
+            echo "সব ফেজ শেষ।"
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          TITLE=$(jq -r --arg id "$ID" '.phases[]|select(.id==$id)|.title' roadmap/STATUS.json)
+          if [ -z "$TITLE" ]; then
+            echo "::error::অজানা ফেজ: $ID"
+            exit 1
+          fi
+          {
+            echo "skip=false"
+            echo "id=$ID"
+            echo "title=$TITLE"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Setup Node
+        if: steps.pick.outputs.skip != 'true'
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+
+      - name: Install deps
+        if: steps.pick.outputs.skip != 'true'
+        run: npm ci
+
+      - name: Run Claude on the phase
+        id: claude
+        if: steps.pick.outputs.skip != 'true'
+        continue-on-error: true
+        uses: anthropics/claude-code-action@v1
+        with:
+          # দুটির যেকোনো একটি secret সেট করুন (অন্যটি ফাঁকা থাকতে পারে)
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          prompt: |
+            তুমি Air Traders (artraders.com.bd)-এর লিড ডেভেলপার এজেন্ট।
+            এই রানে শুধু ফেজ ${{ steps.pick.outputs.id }} — "${{ steps.pick.outputs.title }}" করবে।
+
+            করণীয় ক্রম:
+            1. roadmap/00-RULES.md পড়ো (বাধ্যতামূলক)।
+            2. roadmap/phases/${{ steps.pick.outputs.id }}.md পড়ো — এটাই তোমার একমাত্র কাজের তালিকা।
+            3. roadmap/MIGRATIONS.md এবং roadmap/reports/-এর সর্বশেষ ২টি রিপোর্ট পড়ো।
+            4. roadmap/MASTER-ROADMAP-v6.8.md পুরোটা পড়বে না। ফেজ ফাইলে যে অংশের উল্লেখ আছে শুধু সেটুকু grep/sed দিয়ে পড়ো।
+            5. আগে অডিট → তারপর কোড → মাইগ্রেশন (শুধু SQL ফাইল লিখবে, কোনো ডেটাবেজে চালাবে না) → বিল্ড।
+            6. শেষে `npm run typecheck && npm run lint && npm run build` চালাও; ব্যর্থ হলে ঠিক করো (সর্বোচ্চ ৩ বার)।
+            7. roadmap/reports/${{ steps.pick.outputs.id }}.md লেখো (RULES-এ ফরম্যাট দেওয়া আছে) এবং MIGRATIONS.md হালনাগাদ করো।
+
+            কড়া নিষেধ: .github/, roadmap/STATUS.json, .env* ছোঁবে না। git commit/push করবে না।
+            কোনো key/secret/token কোডে বা রিপোর্টে লিখবে না। অন্য ফেজের কাজ করবে না।
+            ফেজ বড় হয়ে গেলে মূল অংশ শেষ করে বাকিটা রিপোর্টের "বাকি কাজ" অংশে লিখো।
+          claude_args: |
+            --max-turns 45
+            --allowedTools "Read,Write,Edit,MultiEdit,Glob,Grep,Bash(npm run:*),Bash(npm install:*),Bash(npx:*),Bash(node:*),Bash(git status:*),Bash(git diff:*),Bash(git log:*),Bash(ls:*),Bash(cat:*),Bash(sed:*),Bash(mkdir:*)"
+
+      - name: Guard (forbidden paths, secret patterns)
+        id: guard
+        if: steps.pick.outputs.skip != 'true'
+        run: |
+          git checkout -- .github roadmap/STATUS.json 2>/dev/null || true
+          git clean -fdq -- .github 2>/dev/null || true
+          rm -f .env .env.local .env.production
+          git add -A
+          if git diff --cached --quiet; then
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          fi
+          PATTERN='(api[_-]?key|secret|token|password|service_role)[\x22\x27]?\s*[:=]\s*[\x22\x27][A-Za-z0-9_./+\-]{20,}[\x22\x27]|eyJ[A-Za-z0-9_\-]{30,}\.[A-Za-z0-9_\-]{10,}|sk-[A-Za-z0-9_\-]{20,}'
+          if git diff --cached -U0 | grep -E '^\+' | grep -v '^+++' | grep -qiP "$PATTERN"; then
+            echo "leak=true" >> "$GITHUB_OUTPUT"
+            echo "::error::সম্ভাব্য secret পাওয়া গেছে — কমিট বন্ধ"
+          else
+            echo "leak=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Verify (typecheck, lint, build)
+        id: verify
+        if: steps.pick.outputs.skip != 'true' && steps.guard.outputs.leak != 'true' && steps.guard.outputs.changed == 'true'
+        continue-on-error: true
+        env:
+          VITE_SUPABASE_URL: https://placeholder.supabase.co
+          VITE_SUPABASE_ANON_KEY: placeholder-public-anon
+        run: npm run typecheck && npm run lint && npm run build
+
+      - name: Finalize (success)
+        if: steps.pick.outputs.skip != 'true' && steps.claude.outcome == 'success' && steps.guard.outputs.leak == 'false' && steps.guard.outputs.changed == 'true' && steps.verify.outcome == 'success'
+        env:
+          ID: ${{ steps.pick.outputs.id }}
+          TITLE: ${{ steps.pick.outputs.title }}
+          CHAIN: ${{ github.event.inputs.chain }}
+        run: |
+          git reset -q
+          git add -A
+          git commit -qm "feat(roadmap): $ID — $TITLE"
+          jq --arg id "$ID" --arg t "$(date -u +%FT%TZ)" \
+            '(.phases[]|select(.id==$id)) |= (.status="done" | .attempts=0 | .finished_at=$t)' \
+            roadmap/STATUS.json > /tmp/status.json && mv /tmp/status.json roadmap/STATUS.json
+          git add roadmap/STATUS.json
+          git commit -qm "chore(roadmap): $ID done"
+          git push -q origin "HEAD:refs/heads/$WORK_BRANCH"
+
+          DEFAULT_BRANCH=$(gh repo view --json defaultBranchRef -q .defaultBranchRef.name)
+          if [ "$(gh pr list --head "$WORK_BRANCH" --state open --json number -q length)" = "0" ]; then
+            gh pr create --draft --base "$DEFAULT_BRANCH" --head "$WORK_BRANCH" \
+              --title "Roadmap autopilot (সব ফেজ)" \
+              --body "প্রতিটি ফেজ আলাদা কমিটে। রিপোর্ট: roadmap/reports/। সব শেষে রিভিউ করে মার্জ করুন।" || true
+          fi
+
+          NEXT=$(jq -r '[.phases[]|select(.status=="pending")][0].id // empty' roadmap/STATUS.json)
+          if [ -n "$NEXT" ] && [ "$CHAIN" != "false" ]; then
+            gh workflow run roadmap-autopilot.yml --ref "$DEFAULT_BRANCH"
+          elif [ -z "$NEXT" ]; then
+            gh issue create --title "✅ সব রোডম্যাপ ফেজ শেষ" \
+              --body "autopilot ব্রাঞ্চের Draft PR রিভিউ করুন। roadmap/reports/FINAL.md ও roadmap/MANUAL-TASKS.md দেখুন।" || true
+          fi
+
+      - name: Record failure
+        if: ${{ always() && steps.pick.outputs.skip == 'false' && (steps.claude.outcome != 'success' || steps.guard.outputs.leak == 'true' || steps.guard.outputs.changed != 'true' || steps.verify.outcome != 'success') }}
+        env:
+          ID: ${{ steps.pick.outputs.id }}
+          LEAK: ${{ steps.guard.outputs.leak }}
+        run: |
+          [ -z "$ID" ] && exit 0
+          if [ "$LEAK" != "true" ]; then
+            git add -A
+            git commit -qm "wip: $ID (ব্যর্থ চেষ্টা)" --allow-empty || true
+            git push -qf origin "HEAD:refs/heads/wip/$ID" || true
+            git reset -q --hard HEAD~1 || true
+          else
+            git reset -q --hard
+          fi
+          git clean -fdq
+          jq --arg id "$ID" \
+            '(.phases[]|select(.id==$id)) |= (.attempts=((.attempts//0)+1) | if .attempts>=4 then .status="failed" else . end)' \
+            roadmap/STATUS.json > /tmp/status.json && mv /tmp/status.json roadmap/STATUS.json
+          git add roadmap/STATUS.json
+          git commit -qm "chore(roadmap): $ID চেষ্টা ব্যর্থ"
+          git push -q origin "HEAD:refs/heads/$WORK_BRANCH" || true
+          if [ "$(jq -r --arg id "$ID" '.phases[]|select(.id==$id)|.status' roadmap/STATUS.json)" = "failed" ]; then
+            gh issue create --title "❌ $ID ৪ বার ব্যর্থ" \
+              --body "wip/$ID ব্রাঞ্চে শেষ চেষ্টা আছে। ঠিক করে roadmap/STATUS.json-এ status=pending ও attempts=0 করুন। কারণ: Actions লগ দেখুন (লিমিট শেষ, টাইপচেক/লিন্ট/বিল্ড ফেইল, বা secret-প্যাটার্ন)।" || true
+          fi
