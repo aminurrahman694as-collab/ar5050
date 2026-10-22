@@ -3,7 +3,7 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import { AuthProvider, useAuth } from './hooks/useAuth';
 import { CartProvider } from './hooks/useCart';
 import Layout from './components/Layout';
-import BecomeSeller from './pages/BecomeSeller';
+import BecomeSeller from './pages/becomeSeller';
 import AdminLayout from './pages/admin/AdminLayout';
 import AdminHome from './pages/admin/AdminHome';
 import AdminSellers from './pages/admin/AdminSellers';
@@ -29,7 +29,11 @@ import Cart from './pages/shop/Cart';
 import Contact from './pages/info/Contact';
 import Faq from './pages/info/Faq';
 import Terms from './pages/info/Terms';
-import ProfileGuard from './components/ProfileGuard'; // নতুন প্রোফাইল গার্ড ইম্পোর্ট করা হলো
+import ProfileGuard from './components/ProfileGuard';
+
+// আমাদের নতুন কম্পোনেন্ট দুটি ইম্পোর্ট করা হলো
+import { ReelUploader } from './components/ReelUploader';
+import { ReelFeed } from './components/ReelFeed';
 
 function AppRoutes() {
   const { user, profile, loading } = useAuth();
@@ -38,8 +42,8 @@ function AppRoutes() {
     return (
       <div className="min-h-screen bg-dark-900 flex items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin w-12 h-12 border-4 border-primary-600 border-t-transparent rounded-full mx-auto mb-4"></div>
-          <p className="text-dark-400">loading...</p>
+          <div className="animate-spin e-12 h-12 border-4 border-primary-500 border-t-transparent rounded-full mx-auto"></div>
+          <p className="text-dark-400">Loading...</p>
         </div>
       </div>
     );
@@ -53,6 +57,11 @@ function AppRoutes() {
     <Routes>
       <Route path="/" element={<Layout />}>
         <Route index element={<ReelsFeed />} />
+        
+        {/* নতুন ভিডিও কমার্স ও আপলোড রাউট */}
+        <Route path="reels" element={<ReelFeed />} />
+        <Route path="upload-reel" element={<ReelUploader />} />
+
         <Route path="shop" element={<Shop />} />
         <Route path="product/:id" element={<ProductDetail />} />
         <Route path="cart" element={<Cart />} />
@@ -65,49 +74,24 @@ function AppRoutes() {
         <Route path="faq" element={<Faq />} />
         <Route path="terms" element={<Terms />} />
         <Route path="creator/:username" element={<CreatorProfile />} />
-        
-        {/* প্রোফাইল গার্ড যুক্ত ক্রিয়েটর বা পেজ */}
+
         <Route path="create" element={<Create />} />
         <Route path="my-profile" element={<MyProfileRedirect />} />
       </Route>
-
-      {/* অ্যাডমিন প্যানেল */}
-      {isAdmin && (
-        <Route path="/admin" element={<AdminLayout />}>
-          <Route index element={<AdminHome />} />
-          <Route path="sellers" element={<AdminSellers />} />
-          <Route path="products" element={<AdminProducts />} />
-          <Route path="orders" element={<AdminOrders />} />
-          <Route path="approvals" element={<ProductApproval />} />
-          <Route path="commissions" element={<CommissionSettings />} />
-          <Route path="delivery" element={<DeliveryZones />} />
-          <Route path="payments" element={<PaymentSettings />} />
-          <Route path="payouts" element={<AdminSellerPayouts />} />
-          <Route path="reels" element={<ReelsReview />} />
-        </Route>
-      )}
-
-      {/* সেলার ড্যাশবোর্ড */}
-      {isSeller && (
-        <Route path="/seller/dashboard" element={<SellerDashboard />} />
-      )}
-
-      <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );
 }
 
-export default function App() {
+export function App() {
   return (
-    <Router>
-      <AuthProvider>
-        <CartProvider>
-          {/* এখানে পুরো অ্যাপটিকে ProfileGuard দিয়ে ঘিরে দেওয়া হলো যাতে ফোন ও অ্যাভাটার বাধ্যতামূলক হয় */}
-          <ProfileGuard>
-            <AppRoutes />
-          </ProfileGuard>
-        </CartProvider>
-      </AuthProvider>
-    </Router>
+    <AuthProvider>
+      <CartProvider>
+        <Router>
+          <AppRoutes />
+        </Router>
+      </CartProvider>
+    </AuthProvider>
   );
 }
+
+export default App;
