@@ -3,7 +3,7 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import { AuthProvider, useAuth } from './hooks/useAuth';
 import { CartProvider } from './hooks/useCart';
 import Layout from './components/Layout';
-import BecomeSeller from './pages/becomeSeller';
+import BecomeSeller from './pages/BecomeSeller';
 import AdminLayout from './pages/admin/AdminLayout';
 import AdminHome from './pages/admin/AdminHome';
 import AdminSellers from './pages/admin/AdminSellers';
